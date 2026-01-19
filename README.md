@@ -20,11 +20,10 @@
 
 ## 🚀 Funcionalidades Principais
 
-- **Gestão de Usuários:** Autenticação via JWT (JSON Web Token) e controle de acesso baseado em cargos (ADMIN, MODERADOR, RH, USUARIO).
-- **Recuperação de Senha:** Fluxo automatizado com envio de e-mail e tokens de segurança temporários.
-- **Gestão de Conteúdo:** CRUD de vagas, grupos, notícias e habilidades.
-- **Upload de Arquivos:** Processamento e armazenamento de imagens para perfis, banners e notícias.
-- **Favoritos:** Sistema de persistência de conteúdos salvos por usuário.
+- **Gestão de Usuários:** Autenticação via JWT e controle de acesso (RBAC).
+- **Recuperação de Senha:** Fluxo automatizado via e-mail.
+- **Gestão de Conteúdo:** CRUD completo de vagas, grupos e notícias.
+- **Upload de Arquivos:** Gerenciamento de imagens e perfis.
 
 ---
 
@@ -37,26 +36,27 @@
   <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/maven/maven-original.svg" alt="Maven" width="45"/>
 </p>
 
-- **Linguagem:** Java 22 ou superior
-- **Framework:** Spring Boot 3.x
-- **Segurança:** Spring Security & JWT
-- **Banco de Dados:** MySQL 8.0+
-- **Serviço de E-mail:** Spring Mail (SMTP)
+---
+
+## ⚙️ Instalação e Execução Simplificada (Windows)
+
+Para facilitar o uso, disponibilizamos um executável (`.exe`) que não exige comandos no terminal.
+
+### 📋 Pré-requisitos
+1.  **Java Runtime Environment (JRE) 22** ou superior instalado.
+2.  **MySQL Server** instalado e rodando (ou acesso a um banco na nuvem).
 
 ---
 
-## ⚙️ Instalação e Execução (Via Release)
+### 📦 Como Rodar
 
-Para facilitar o uso, disponibilizamos o executável da aplicação nas [Releases](https://github.com/seu-usuario/seu-repositorio/releases).
+1. **Baixe a pasta** do projeto (Release) e extraia em seu computador.
+2. Certifique-se de que a estrutura da pasta contém os seguintes arquivos juntos:
+   - `diverSOS.exe` (O aplicativo)
+   - `diversos-backend.jar` (O sistema)
+   - `.env` (Configurações)
 
-### 📋 Pré-requisitos
-1. **Java Runtime Environment (JRE) 22** ou superior instalado e configurado no PATH.
-2. **MySQL Server** instalado e rodando localmente.
-
-### ⚠️ Configuração Obrigatória do Banco de Dados
-
-Antes de rodar a aplicação pela primeira vez, você deve criar o banco de dados manualmente. 
-Abra o seu terminal MySQL ou MySQL Workbench e execute:
-
-```sql
-CREATE DATABASE diversos;
+3. **Configure o Banco de Dados:**
+   Abra seu gerenciador MySQL e crie o banco:
+   ```sql
+   CREATE DATABASE diversos;
