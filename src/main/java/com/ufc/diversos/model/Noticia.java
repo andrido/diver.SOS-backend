@@ -18,11 +18,6 @@ public class Noticia {
 
     private LocalDateTime dataPublicacao;
 
-    @Column(name = "imagem_url")
-    private String imagemUrl;
-
-    @Column(name = "link_externo")
-    private String linkExterno;
 
     @ManyToOne
     private Usuario autor;

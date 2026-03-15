@@ -15,6 +15,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
@@ -37,67 +38,51 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // Ativa o CORS com a configuração definida no método abaixo
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Desativa CSRF (padrão para APIs Stateless/JWT)
-                .csrf(csrf -> csrf.disable())
-                // Define que não haverá sessão no servidor (Stateless)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // --- REGRAS DE ACESSO ---
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // 1. ROTAS PÚBLICAS (Qualquer um acessa)
+                        // --- 1. ROTAS TOTALMENTE PÚBLICAS ---
                         .requestMatchers(HttpMethod.GET, "/imagens/**").permitAll()
                         .requestMatchers("/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/usuarios").permitAll() // Cadastro
-                        .requestMatchers(HttpMethod.GET, "/auth/confirmar").permitAll()
-                        .requestMatchers("/auth/esqueci-senha").permitAll()
-                        .requestMatchers("/auth/nova-senha").permitAll()
-                        .requestMatchers("/error").permitAll()
-
-                        // Leitura pública de conteúdos (Qualquer um vê, mas não edita)
+                        .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()
                         .requestMatchers(HttpMethod.GET, "/vagas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/noticias/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/habilidades/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/grupos/**").permitAll()
-
-                        // 2. ROTAS DO PRÓPRIO USUÁRIO LOGADO
+                        .requestMatchers(HttpMethod.GET, "/auth/confirmar").permitAll()
+                        // --- 2. ROTAS DO USUÁRIO LOGADO (MEU PERFIL) ---
                         .requestMatchers("/usuarios/me/**").authenticated()
 
-                        // --- CORREÇÃO AQUI ---
-                        // Permite que qualquer usuário logado TENTE atualizar ou ver um perfil pelo ID.
-                        // A segurança (se o ID é dele mesmo) será feita pelo UsuarioService.
-                        .requestMatchers(HttpMethod.PUT, "/usuarios/{id}").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/usuarios/{id}").authenticated()
-                        // ---------------------
+                        // --- 3. REGRAS DE ADMIN / MODERADOR ---
 
-                        // 3. REGRAS DO RH (Vagas específicas)
-                        // RH pode Criar e Editar vagas
-                        .requestMatchers(HttpMethod.POST, "/vagas/**").hasAnyRole("ADMINISTRADOR", "MODERADOR", "RH")
-                        .requestMatchers(HttpMethod.PUT, "/vagas/**").hasAnyRole("ADMINISTRADOR", "MODERADOR", "RH")
-                        // Deletar vaga apenas ADMIN/MODERADOR
+                        // Vagas
+                        .requestMatchers(HttpMethod.POST, "/vagas/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        .requestMatchers(HttpMethod.PUT, "/vagas/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
                         .requestMatchers(HttpMethod.DELETE, "/vagas/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
-
-                        // 4. BLOQUEIOS RESTRITOS (Apenas ADMIN e MODERADOR)
 
                         // Notícias
                         .requestMatchers("/noticias/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+
                         // Grupos
-                        .requestMatchers("/grupos/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        .requestMatchers(HttpMethod.POST, "/grupos/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        .requestMatchers(HttpMethod.PUT, "/grupos/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        .requestMatchers(HttpMethod.DELETE, "/grupos/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+
                         // Habilidades
-                        .requestMatchers("/habilidades/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        .requestMatchers(HttpMethod.POST, "/habilidades/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
 
-                        // Gestão Geral de Usuários (Listar todos, Deletar outros)
-                        // Como colocamos a regra do PUT {id} lá em cima, essa aqui só pega o resto (Delete, ListAll)
-                        .requestMatchers("/usuarios/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        // Gestão de Usuários (Genérico)
+                        // Como a rota /usuarios/me já foi tratada lá em cima, o que sobrar aqui (ex: /usuarios/5)
+                        // cai nesta regra de Admin.
+                        .requestMatchers(HttpMethod.GET, "/usuarios").hasAnyRole("ADMINISTRADOR", "MODERADOR")
+                        .requestMatchers(HttpMethod.DELETE, "/usuarios/**").hasAnyRole("ADMINISTRADOR", "MODERADOR")
 
-                        // 5. BLOQUEIO PADRÃO (Qualquer outra coisa precisa estar logado)
+                        // --- 4. BLOQUEIO PADRÃO ---
                         .anyRequest().authenticated()
                 )
-
-                // Adiciona o filtro de Token
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -106,13 +91,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        configuration.addAllowedOriginPattern("http://localhost:*");
-        configuration.addAllowedOriginPattern("https://*.onrender.com");
-        configuration.addAllowedOriginPattern("https://*.railway.app");
-
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -2,9 +2,9 @@ package com.ufc.diversos.controller;
 
 import com.ufc.diversos.model.Noticia;
 import com.ufc.diversos.service.NoticiaService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -19,8 +19,16 @@ public class NoticiaController {
     }
 
     @GetMapping
-    public List<Noticia> listar() {
-        return noticiaService.listarTodas();
+    public ResponseEntity<Page<Noticia>> listar(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String titulo) {
+
+        if (titulo != null && !titulo.isBlank()) {
+            return ResponseEntity.ok(noticiaService.buscarPorTitulo(titulo, page, size));
+        }
+
+        return ResponseEntity.ok(noticiaService.listarTodas(page, size));
     }
 
     @GetMapping("/{id}")
@@ -47,10 +55,5 @@ public class NoticiaController {
         return noticiaService.deletar(id) ?
                 ResponseEntity.ok().build() :
                 ResponseEntity.notFound().build();
-    }
-    @PostMapping("/{id}/foto")
-    public ResponseEntity<String> subirImagem(@PathVariable Long id, @RequestParam("foto") MultipartFile arquivo) {
-        noticiaService.atualizarImagemNoticia(id, arquivo);
-        return ResponseEntity.ok("Imagem da notícia enviada!");
     }
 }

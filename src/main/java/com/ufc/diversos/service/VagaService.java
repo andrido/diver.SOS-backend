@@ -1,15 +1,17 @@
 package com.ufc.diversos.service;
 
 import com.ufc.diversos.model.Habilidade;
-import com.ufc.diversos.model.TipoDeUsuario;
-import com.ufc.diversos.model.Usuario;
 import com.ufc.diversos.model.Vaga;
-
+// Importando os Enums para não precisar escrever Vaga.StatusVaga toda hora no código
 import com.ufc.diversos.model.Vaga.StatusVaga;
 import com.ufc.diversos.model.Vaga.TipoVaga;
 import com.ufc.diversos.model.Vaga.ModalidadeVaga;
 import com.ufc.diversos.repository.UsuarioRepository;
 import com.ufc.diversos.repository.VagaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import com.ufc.diversos.repository.HabilidadeRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,45 +28,25 @@ public class VagaService {
     private final ArquivoService arquivoService;
     private final HabilidadeRepository habilidadeRepository;
     private final UsuarioRepository usuarioRepository;
-    private final UsuarioService usuarioService;
 
     public VagaService(VagaRepository vagaRepository,
                        HabilidadeRepository habilidadeRepository,
                        ArquivoService arquivoService,
-                       UsuarioRepository usuarioRepository,
-                       UsuarioService usuarioService) {
+                       UsuarioRepository usuarioRepository) {
         this.vagaRepository = vagaRepository;
         this.arquivoService = arquivoService;
         this.habilidadeRepository = habilidadeRepository;
         this.usuarioRepository = usuarioRepository;
-        this.usuarioService = usuarioService;
     }
-    public List<Vaga> listarVagasAtivas() {
-        return vagaRepository.findByStatus(StatusVaga.ATIVA);
-    }
-
-    public List<Vaga> listarTodasAsVagas(){
-        return vagaRepository.findAll();
+    public Page<Vaga> listarTodas(int pagina, int tamanho) {
+        Pageable pageable = PageRequest.of(pagina, tamanho, Sort.by("id").descending());
+        return vagaRepository.findByStatus(StatusVaga.ATIVA, pageable);
     }
 
-    public List<Vaga> listarVagasParaDashboard() {
-        Usuario logado = usuarioService.getUsuarioLogado();
 
-
-        if (logado == null) {
-            return new ArrayList<>();
-        }
-
-        if (logado.getTipoDeUsuario() == TipoDeUsuario.RH) {
-
-            return vagaRepository.findByCriadorId(logado.getId());
-        }
-
-        return vagaRepository.findAll();
-    }
-
-    public List<Vaga> buscarComFiltros(String termo, ModalidadeVaga modalidade, TipoVaga tipo, String cidade) {
-        return vagaRepository.buscarComFiltros(termo, modalidade, tipo, cidade);
+    public Page<Vaga> buscarComFiltros(String termo, ModalidadeVaga modalidade, TipoVaga tipo, String cidade, int pagina, int tamanho) {
+        Pageable pageable = PageRequest.of(pagina, tamanho, Sort.by("id").descending());
+        return vagaRepository.buscarComFiltros(termo, modalidade, tipo, cidade, pageable);
     }
 
     public Optional<Vaga> buscarPorId(Long id) {
@@ -77,26 +59,26 @@ public class VagaService {
         Vaga vaga = vagaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
 
+        // 1. Salva na pasta "uploads/vagas"
         String caminhoBanner = arquivoService.salvarArquivo(arquivo, "vagas");
 
-
-        vaga.setBannerDaVaga(caminhoBanner);
+        // 2. Atualiza o banco
+        vaga.setLinkDaVaga(caminhoBanner);
 
         return vagaRepository.save(vaga);
     }
-    @Transactional
-    public Vaga criarVaga(Vaga vaga) {
-        Usuario logado = usuarioService.getUsuarioLogado();
+    public Vaga criar(Vaga vaga) {
+
         vaga.setDataCriacao(LocalDateTime.now());
 
-        vaga.setCriador(logado);
-        // RH cadastra vaga INATIVA por padrão
-        if (logado.getTipoDeUsuario() == TipoDeUsuario.RH) {
-            vaga.setStatus(StatusVaga.INATIVA);
+        if (vaga.getStatus() == null) {
+            vaga.setStatus(StatusVaga.ATIVA);
         }
+
 
         return vagaRepository.save(vaga);
     }
+
     public Optional<Vaga> atualizar(Long id, Vaga dados) {
         return vagaRepository.findById(id).map(v -> {
 
@@ -136,11 +118,9 @@ public class VagaService {
     }
     public boolean deletar(Long id) {
         if (vagaRepository.existsById(id)) {
-            // 1. Limpa quem favoritou essa vaga
             usuarioRepository.removerVagaDosFavoritos(id);
 
-            // 2. Agora deleta a vaga sem erro
-            vagaRepository.deleteById(id);
+                 vagaRepository.deleteById(id);
             return true;
         }
         return false;

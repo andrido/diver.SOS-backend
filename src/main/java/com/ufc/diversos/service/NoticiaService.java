@@ -2,8 +2,11 @@ package com.ufc.diversos.service;
 
 import com.ufc.diversos.model.Noticia;
 import com.ufc.diversos.repository.NoticiaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,32 +17,21 @@ public class NoticiaService {
 
     private final NoticiaRepository noticiaRepository;
     private final UsuarioService usuarioService; // Necessário para setar o Autor
-    private final ArquivoService arquivoService;
 
-    public NoticiaService(NoticiaRepository noticiaRepository, UsuarioService usuarioService, ArquivoService arquivoService) {
+    public NoticiaService(NoticiaRepository noticiaRepository, UsuarioService usuarioService) {
         this.noticiaRepository = noticiaRepository;
         this.usuarioService = usuarioService;
-        this.arquivoService = arquivoService;
     }
 
-    @Transactional
-    public Noticia atualizarImagemNoticia(Long id, org.springframework.web.multipart.MultipartFile arquivo) {
-        Noticia noticia = noticiaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notícia não encontrada"));
-
-        if (arquivo == null || arquivo.isEmpty()) {
-            throw new RuntimeException("O arquivo de imagem não pode estar vazio.");
-        }
-
-        String caminhoDaImagem = arquivoService.salvarArquivo(arquivo, "noticias");
-
-        noticia.setImagemUrl(caminhoDaImagem);
-
-        return noticiaRepository.save(noticia);
+    public Page<Noticia> listarTodas(int pagina, int tamanho) {
+        // Ordenação DESC (mais recente primeiro)
+        Pageable pageable = PageRequest.of(pagina, tamanho, Sort.by("dataPublicacao").descending());
+        return noticiaRepository.findAll(pageable);
     }
 
-    public List<Noticia> listarTodas() {
-        return noticiaRepository.findAll();
+    public Page<Noticia> buscarPorTitulo(String titulo, int pagina, int tamanho) {
+        Pageable pageable = PageRequest.of(pagina, tamanho, Sort.by("dataPublicacao").descending());
+        return noticiaRepository.findByTituloContainingIgnoreCase(titulo, pageable);
     }
 
     public Optional<Noticia> buscarPorId(Long id) {
